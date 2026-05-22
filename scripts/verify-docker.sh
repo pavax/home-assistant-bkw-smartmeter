@@ -3,7 +3,7 @@
 # From repo root: ./scripts/verify-docker.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VERIFY_DIR="${ROOT}/scripts/mybkw-verification"
+VERIFY_DIR="${ROOT}/scripts/bkw-smartmeter-ha-verify"
 COMPOSE_FILE="${VERIFY_DIR}/docker-compose.yml"
 
 dc() {
@@ -42,4 +42,4 @@ done
 
 echo "==> Done"
 echo "Open http://127.0.0.1:8123 → Add integration → BKW Smart Meter"
-echo "Stop: docker compose -f scripts/mybkw-verification/docker-compose.yml --project-directory scripts/mybkw-verification down"
+echo "Stop: docker compose -f scripts/bkw-smartmeter-ha-verify/docker-compose.yml --project-directory scripts/bkw-smartmeter-ha-verify down"

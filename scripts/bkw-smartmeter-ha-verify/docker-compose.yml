@@ -1,6 +1,6 @@
 # Home Assistant for local verification of custom_components/bkw_smartmeter.
-# Paths are relative to this file (scripts/mybkw-verification/).
-name: mybkw-verification
+# Paths are relative to this file (scripts/bkw-smartmeter-ha-verify/).
+name: bkw-smartmeter-ha-verify
 
 services:
   homeassistant:

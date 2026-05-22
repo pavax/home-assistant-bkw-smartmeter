@@ -1,3 +1,0 @@
-# Home Assistant writes into config/ at runtime; 
-config/*
-!config/.gitkeep
