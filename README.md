@@ -23,7 +23,7 @@ This integration only reflects what the BKW energy monitoring API provides today
 
 ## Requirements
 
-- Home Assistant **2024.1** or newer
+- Home Assistant **2024.6.0** or newer (see `hacs.json`)
 - BKW account with smart-meter data in [my.bkw.ch](https://my.bkw.ch/)
 - HTTPS is **not** required for this integration (auth uses a manual code paste, not HA’s OAuth callback)
 
@@ -93,22 +93,9 @@ Under **Configure → Options**, set **Update interval (minutes)** (**1–10**) 
 
 See **Limitations** above for why the latest day is not “today” during the day.
 
-### Time zones (Swiss local vs API UTC)
+### Time zone
 
-All logic and sensor metadata use **Europe/Zurich** calendar dates and local times. Only the HTTP request converts to UTC.
-
-Example **Swiss portal day 2026-05-21** (CEST, UTC+2):
-
-| | Swiss (local) | BKW API (`measurementValidity*`) |
-|--|---------------|----------------------------------|
-| Start | 2026-05-21 **00:00:00** | `2026-05-20T22:00:00.000Z` |
-| End | 2026-05-21 **23:59:59** | `2026-05-21T21:59:59.999Z` |
-
-The portal day is the full **Swiss calendar day** (00:00–23:59:59.999 local); the API `measurementValidityStop` is that end instant in UTC (e.g. `21:59:59.999Z` in CEST, `22:59:59.999Z` in CET).
-
-`data_date` and attributes `period_start` / `period_end` are **Swiss local**; `period_start_utc` / `period_end_utc` are included for debugging.
-
-After **midnight Swiss** on the next calendar day, the integration polls that completed day.
+Days follow the **Swiss calendar** (`Europe/Zurich`). Sensor dates and `period_start` / `period_end` are local; the BKW API is called with the equivalent UTC range. A new portal day is fetched after **midnight Swiss**, once that day is complete (see **Limitations**).
 
 ## Energy dashboard
 
@@ -128,25 +115,6 @@ BKW refresh tokens expire relatively quickly. If sensors stop updating or you se
 - Tokens are stored in your Home Assistant config entry only.
 - Do not share network captures or logs containing tokens.
 - Use at your own risk; comply with [BKW terms of use](https://www.bkw.ch/).
-
-## Debugging
-
-Enable verbose logs in `configuration.yaml`:
-
-```yaml
-logger:
-  default: info
-  logs:
-    custom_components.bkw_smartmeter: debug
-```
-
-Then check **Settings → System → Logs**. At debug level you will see:
-
-- Which time window is used (`validation` vs `polling`)
-- Full metering-data URL and params (no tokens)
-- Timestamps in logs look like `2026-05-21T10:00:00.000Z` (`%3A` in old logs was only URL-encoded `:` — same value)
-- Token refresh / expiry status
-- P1D response summary (data points per poll)
 
 ## Development
 
@@ -174,7 +142,7 @@ docker compose -f scripts/bkw-smartmeter-ha-verify/docker-compose.yml \
   --project-directory scripts/bkw-smartmeter-ha-verify down
 ```
 
-Then open **http://127.0.0.1:8123** and add **BKW Smart Meter**. Runtime files under `scripts/bkw-smartmeter-ha-verify/config/` are gitignored except `configuration.yaml`.
+Then open **http://127.0.0.1:8123** → **Settings → Devices & services → Add integration** → **BKW Smart Meter**.
 
 ## License
 
