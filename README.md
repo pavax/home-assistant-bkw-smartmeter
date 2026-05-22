@@ -1,7 +1,10 @@
 # BKW Smart Meter – Home Assistant Integration
 
-Unofficial Home Assistant custom integration that reads **grid consumption** from the [BKW customer portal](https://my.bkw.ch/) (daily totals), using the same APIs as the web app.
+Unofficial Home Assistant custom integration for customers of **[BKW](https://www.bkw.ch/)** (*Berner Kantonalwerke*), the electricity utility for Bern and much of Switzerland.
 
+If you have one of BKW’s **new smart meters**, your daily energy data is available in the **[myBKW](https://my.bkw.ch/)** customer portal (website and app). This integration logs in like the portal, reads the same **daily kWh** values (e.g. **Strombezug** / grid import), and exposes them as Home Assistant sensors — including support for the **Energy dashboard**.
+
+Not affiliated with or endorsed by BKW.
 ## Features
 
 - OAuth2 login (open BKW in the browser, paste the authorization code into Home Assistant)
@@ -13,14 +16,14 @@ Unofficial Home Assistant custom integration that reads **grid consumption** fro
 
 ## Limitations
 
-BKW only provides **complete past calendar days**, not live “today so far” usage. During the day you typically see **yesterday’s** total (Swiss time, `Europe/Zurich`). After **midnight Swiss**, the next finished day appears once BKW publishes it.
+The myBKW portal API used here only provides **complete past calendar days**, not live “today so far” usage. During the day you typically see **yesterday’s** total (Swiss time, `Europe/Zurich`). After **midnight Swiss**, the next finished day appears once BKW publishes it.
 
 There is no 15-minute or hourly data in the portal API today, so the integration is best for **daily history** and the **Energy dashboard**, not real-time load tracking.
 
 ## Requirements
 
 - Home Assistant **2024.6.0** or newer
-- BKW account with smart-meter data on [my.bkw.ch](https://my.bkw.ch/)
+- BKW electricity customer with a **smart meter** and access to **[my.bkw.ch](https://my.bkw.ch/)** (energy charts visible after login)
 
 ## Installation
 
@@ -42,7 +45,7 @@ There is no 15-minute or hourly data in the portal API today, so the integration
 ### Log in
 
 1. Start the config flow and open the **authorize URL** in a browser.
-2. Log in to BKW.
+2. Log in with your **myBKW** account.
 3. After redirect to `https://my.bkw.ch/energy?code=...`, copy only the **`code`** value from the URL.
 4. Paste the code into Home Assistant.
 
