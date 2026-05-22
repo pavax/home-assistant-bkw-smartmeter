@@ -154,6 +154,28 @@ Then check **Settings → System → Logs**. At debug level you will see:
 python -m compileall custom_components/bkw_smartmeter
 ```
 
+### Docker verification
+
+Smoke-test the integration in Home Assistant. Config and `custom_components/bkw_smartmeter` are bind-mounted in `scripts/mybkw-verification/docker-compose.yml` (live edits apply after container restart).
+
+From the **repository root**:
+
+```bash
+./scripts/verify-docker.sh
+```
+
+Manual start/stop:
+
+```bash
+docker compose -f scripts/mybkw-verification/docker-compose.yml \
+  --project-directory scripts/mybkw-verification up -d
+
+docker compose -f scripts/mybkw-verification/docker-compose.yml \
+  --project-directory scripts/mybkw-verification down
+```
+
+Then open **http://127.0.0.1:8123** and add **BKW Smart Meter**. Runtime files under `scripts/mybkw-verification/config/` are gitignored except `configuration.yaml`.
+
 ## License
 
 MIT (see repository license file if present).
