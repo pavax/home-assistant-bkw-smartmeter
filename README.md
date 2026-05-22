@@ -37,9 +37,13 @@ This integration only reflects what the BKW energy monitoring API provides today
 
 ### Option B: HACS (custom repository)
 
-1. In HACS → **Integrations** → **Custom repositories**, add this repository URL and category **Integration**.
-2. Install **BKW Smart Meter** from HACS.
+1. In HACS → **Integrations** → **Custom repositories**, add  
+   `https://github.com/pavax/home-assistant-bkw-smartmeter`  
+   and category **Integration**.
+2. Install **BKW Smart Meter** from HACS (pick the latest **release** version, or **master** if no release is shown).
 3. Restart Home Assistant and add the integration as above.
+
+**HACS download 404 (`refs/heads/bc9e7c9` or similar):** HACS sometimes treats a **commit hash** as a branch name when the repo has **no GitHub Release**. Fix: [create a release](https://github.com/pavax/home-assistant-bkw-smartmeter/releases/new) (e.g. tag `v0.4.1` matching `manifest.json` `version`), push it, then in HACS remove the custom repo, re-add it, and download again. The working archive URL is `.../archive/refs/heads/master.zip` or `.../archive/refs/tags/v0.4.1.zip`.
 
 ## Configuration
 
