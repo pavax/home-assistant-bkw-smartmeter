@@ -11,6 +11,16 @@ Unofficial Home Assistant custom integration that reads **grid consumption** fro
   - **Consumption (latest day)** (`sensor.*_latest_day`) – daily kWh for the latest published portal day (`data_date`, `period_start`, `period_end` attributes)
   - **Consumption total** – monotonic cumulative kWh for the Energy dashboard (adds each new published day once)
 
+## Limitations
+
+This integration only reflects what the BKW energy monitoring API provides today.
+
+**No current-day consumption.** BKW publishes **complete past portal days** only. During the day, sensors show the **last finished Swiss calendar day** (typically “yesterday”), not how much you have used **so far today**. A new day appears after **midnight Europe/Zurich**, once that portal day is complete.
+
+**Limited use for live optimisation.** Without same-day or short-interval data (e.g. last 15 minutes or last hour), it is hard to spot **large loads while they happen** and adjust behaviour in real time. The integration is strong for **daily totals**, **history**, and the **Energy dashboard** — not for “what am I using right now?”.
+
+**Where the biggest gain would be.** The largest benefit for households would come from **BKW extending the API** so customers can access **current-day** values (ideally in 15-minute steps), even if marked **provisional** and corrected later. This project could then add sensors and automations for near-real-time use. Until BKW offers that officially, this integration stays within stable, documented P1D daily data.
+
 ## Requirements
 
 - Home Assistant **2024.1** or newer
@@ -72,7 +82,7 @@ Default: **`PRODUCTION_BKW`** (= Strombezug). If setup fails with a 400 error:
 
 Under **Configure → Options**, set **Update interval (minutes)** (**1–10**) and/or **Data type**. The maximum is capped at 10 minutes because BKW refresh tokens expire after 15 minutes (`refresh_expires_in`); polling must run more often than that to keep the session alive. Saving triggers an **immediate** data fetch and applies the new interval without a full restart.
 
-BKW only returns **complete past days**. During the day you still see **yesterday** in Swiss time (or the last finished portal day), not the current calendar day.
+See **Limitations** above for why the latest day is not “today” during the day.
 
 ### Time zones (Swiss local vs API UTC)
 
