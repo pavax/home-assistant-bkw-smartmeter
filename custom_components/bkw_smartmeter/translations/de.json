@@ -1,0 +1,52 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mit BKW verbinden",
+        "description": "1. Öffnen Sie diesen Link im Browser und melden Sie sich an:\n{authorize_url}\n\n2. Nach der Anmeldung werden Sie zu my.bkw.ch/energy weitergeleitet. Kopieren Sie den Parameter `code` aus der Adresszeile.\n\n3. Fügen Sie den Code unten ein.",
+        "data": {
+          "code": "Autorisierungscode"
+        }
+      },
+      "metering_point": {
+        "title": "Messpunkt",
+        "description": "Geben Sie Ihren Messpunktcode (meteringPointCode) aus dem BKW-Portal ein. Sie finden ihn in den Browser-Entwicklertools bei metering-data-Anfragen oder in der Portal-URL.",
+        "data": {
+          "metering_point_code": "Messpunktcode",
+          "data_type": "Datentyp (erweitert)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Ungültiger Code oder abgelaufene Sitzung. Neuen Link erzeugen und erneut versuchen.",
+      "cannot_connect": "Verbindung zu BKW fehlgeschlagen. Später erneut versuchen.",
+      "invalid_metering_point": "Ungültige Länge des Messpunktcodes.",
+      "invalid_data_type": "Messdaten konnten nicht geladen werden. Öffnen Sie die Energieübersicht auf my.bkw.ch, kopieren Sie dataType aus einer metering-data-Anfrage in den DevTools und tragen Sie ihn oben ein (Standard: PRODUCTION_BKW)."
+    },
+    "abort": {
+      "missing_pkce": "Anmeldesitzung abgelaufen. Bitte erneut starten.",
+      "missing_tokens": "Authentifizierung fehlgeschlagen. Bitte erneut starten."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BKW Smart Meter Optionen",
+        "data": {
+          "data_type": "Datentyp",
+          "update_interval_minutes": "Aktualisierungsintervall (Minuten)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "consumption_latest_day": {
+        "name": "Verbrauch (letzter Tag)"
+      },
+      "consumption_total": {
+        "name": "Verbrauch gesamt"
+      }
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to BKW",
+        "description": "1. Open this link in your browser and log in:\n{authorize_url}\n\n2. After login you are redirected to my.bkw.ch/energy. Copy the `code` parameter from the address bar.\n\n3. Paste the code below.",
+        "data": {
+          "code": "Authorization code"
+        }
+      },
+      "metering_point": {
+        "title": "Metering point",
+        "description": "Enter your metering point code (Messpunkt) from the BKW portal. You can find it in the browser network tab on metering-data requests as meteringPointCode, or in the portal URL.",
+        "data": {
+          "metering_point_code": "Metering point code",
+          "data_type": "Data type (advanced)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid authorization code or expired session. Generate a new link and try again.",
+      "cannot_connect": "Could not connect to BKW. Try again later.",
+      "invalid_metering_point": "Invalid metering point code length.",
+      "invalid_data_type": "Could not load metering data. Open the energy chart on my.bkw.ch, copy the dataType from a metering-data request in DevTools, and enter it above (default: PRODUCTION_BKW)."
+    },
+    "abort": {
+      "missing_pkce": "Login session expired. Start again.",
+      "missing_tokens": "Authentication failed. Start again."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BKW Smart Meter options",
+        "data": {
+          "data_type": "Data type",
+          "update_interval_minutes": "Update interval (minutes)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "consumption_latest_day": {
+        "name": "Consumption (latest day)"
+      },
+      "consumption_total": {
+        "name": "Consumption total"
+      }
+    }
+  }
+}

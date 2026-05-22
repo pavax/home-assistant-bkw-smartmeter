@@ -1,0 +1,12 @@
+{
+  "domain": "bkw_smartmeter",
+  "name": "BKW Smart Meter",
+  "codeowners": ["@patrick-dobler"],
+  "config_flow": true,
+  "documentation": "https://github.com/patrick-dobler/myBKW-SmartMeter",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/patrick-dobler/myBKW-SmartMeter/issues",
+  "requirements": ["tzdata>=2024.1"],
+  "version": "0.4.1"
+}
