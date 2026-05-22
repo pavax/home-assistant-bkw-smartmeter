@@ -44,9 +44,10 @@ DATA_TYPE_STROMBEZUG = DATA_TYPE_PRODUCTION
 # Sensor display (daily kWh values, e.g. 12.345)
 SUGGESTED_DISPLAY_PRECISION = 3
 
-# Polling and token refresh
-UPDATE_INTERVAL_MINUTES = 15
+# Polling and token refresh (BKW refresh_expires_in is 900s; poll must stay below that)
+UPDATE_INTERVAL_MINUTES = 5
 MIN_UPDATE_INTERVAL_MINUTES = 1
+MAX_UPDATE_INTERVAL_MINUTES = 10
 CONF_UPDATE_INTERVAL_MINUTES = "update_interval_minutes"
 TOKEN_REFRESH_MARGIN_SECONDS = 120
 
@@ -73,7 +74,7 @@ METERING_POINT_MAX_LENGTH = 40
 
 
 def get_update_interval_minutes(entry: ConfigEntry) -> int:
-    """Return configured poll interval in minutes (minimum 1)."""
+    """Return configured poll interval in minutes (clamped to 1–10)."""
     raw = entry.options.get(CONF_UPDATE_INTERVAL_MINUTES)
     if raw is None:
         return UPDATE_INTERVAL_MINUTES
@@ -81,7 +82,10 @@ def get_update_interval_minutes(entry: ConfigEntry) -> int:
         minutes = int(raw)
     except (TypeError, ValueError):
         return UPDATE_INTERVAL_MINUTES
-    return max(MIN_UPDATE_INTERVAL_MINUTES, minutes)
+    return min(
+        MAX_UPDATE_INTERVAL_MINUTES,
+        max(MIN_UPDATE_INTERVAL_MINUTES, minutes),
+    )
 
 
 def get_update_interval_timedelta(entry: ConfigEntry) -> timedelta:

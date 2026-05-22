@@ -6,7 +6,7 @@ Unofficial Home Assistant custom integration that reads **grid consumption** fro
 
 - OAuth2 login with PKCE (paste authorization code from browser redirect)
 - Automatic access-token refresh
-- Polls **P1D** metering data on a configurable interval (default **15** minutes, minimum **1**) for the **latest published portal day** (always a past date; BKW does not expose the current calendar day until it is complete)
+- Polls **P1D** metering data on a configurable interval (default **10** minutes, **1–10** allowed) for the **latest published portal day** (always a past date; BKW does not expose the current calendar day until it is complete)
 - Sensors:
   - **Consumption (latest day)** (`sensor.*_latest_day`) – daily kWh for the latest published portal day (`data_date`, `period_start`, `period_end` attributes)
   - **Consumption total** – monotonic cumulative kWh for the Energy dashboard (adds each new published day once)
@@ -70,7 +70,7 @@ Default: **`PRODUCTION_BKW`** (= Strombezug). If setup fails with a 400 error:
 
 ### 4. Update interval
 
-Under **Configure → Options**, set **Update interval (minutes)** (minimum 1) and/or **Data type**. Saving triggers an **immediate** data fetch and applies the new interval without a full restart.
+Under **Configure → Options**, set **Update interval (minutes)** (**1–10**) and/or **Data type**. The maximum is capped at 10 minutes because BKW refresh tokens expire after 15 minutes (`refresh_expires_in`); polling must run more often than that to keep the session alive. Saving triggers an **immediate** data fetch and applies the new interval without a full restart.
 
 BKW only returns **complete past days**. During the day you still see **yesterday** in Swiss time (or the last finished portal day), not the current calendar day.
 

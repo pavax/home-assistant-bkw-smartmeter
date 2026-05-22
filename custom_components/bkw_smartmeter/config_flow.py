@@ -31,6 +31,7 @@ from .const import (
     DOMAIN,
     FLOW_AUTHORIZE_URL,
     FLOW_CODE_VERIFIER,
+    MAX_UPDATE_INTERVAL_MINUTES,
     MIN_UPDATE_INTERVAL_MINUTES,
     METERING_POINT_MAX_LENGTH,
     METERING_POINT_MIN_LENGTH,
@@ -274,7 +275,10 @@ class BkwSmartMeterOptionsFlowHandler(config_entries.OptionsFlow):
                         default=get_update_interval_minutes(self.config_entry),
                     ): vol.All(
                         vol.Coerce(int),
-                        vol.Range(min=MIN_UPDATE_INTERVAL_MINUTES),
+                        vol.Range(
+                            min=MIN_UPDATE_INTERVAL_MINUTES,
+                            max=MAX_UPDATE_INTERVAL_MINUTES,
+                        ),
                     ),
                 }
             ),
