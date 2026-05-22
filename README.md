@@ -51,15 +51,13 @@ There is no 15-minute or hourly data in the portal API today, so the integration
 
 Codes expire quickly; if login fails, start the flow again.
 
-### Metering point code
+### Metering point code (Messpunkt)
 
-Enter your **metering point code**, e.g. `CH1022201234500000000000000196130`.
+Enter your **metering point code** (*Messpunkt*), e.g. `CHXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX`.
 
-To find it:
+**In the myBKW UI:** open **[Mein Energiemonitoring](https://my.bkw.ch/energy)** — the Messpunkt is shown there (same `CH…` number as in the portal).
 
-1. Open [my.bkw.ch/energy](https://my.bkw.ch/energy) and the **Strombezug** chart.
-2. Browser **DevTools → Network**, filter `metering-data`.
-3. Copy `meteringPointCode` from the request URL.
+**Alternatively (DevTools):** on the energy page, open **Strombezug**, then browser **DevTools → Network**, filter `metering-data`, and copy `meteringPointCode` from the request URL.
 
 ### Data type
 
