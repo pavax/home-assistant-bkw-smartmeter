@@ -40,10 +40,15 @@ This integration only reflects what the BKW energy monitoring API provides today
 1. In HACS → **Integrations** → **Custom repositories**, add  
    `https://github.com/pavax/home-assistant-bkw-smartmeter`  
    and category **Integration**.
-2. Install **BKW Smart Meter** from HACS (pick the latest **release** version, or **master** if no release is shown).
+2. Install **BKW Smart Meter** from HACS.
 3. Restart Home Assistant and add the integration as above.
 
-**HACS download 404 (`refs/heads/bc9e7c9` or similar):** HACS sometimes treats a **commit hash** as a branch name when the repo has **no GitHub Release**. Fix: [create a release](https://github.com/pavax/home-assistant-bkw-smartmeter/releases/new) (e.g. tag `v0.4.1` matching `manifest.json` `version`), push it, then in HACS remove the custom repo, re-add it, and download again. The working archive URL is `.../archive/refs/heads/master.zip` or `.../archive/refs/tags/v0.4.1.zip`.
+**Stay on latest `master`:** HACS uses this repo’s GitHub default branch (`master`). There is no `default_branch` key in `hacs.json`; do not set `hide_default_branch` in `hacs.json` (that would hide branch installs).
+
+- **First install (HACS 2.x):** If the download dialog offers a version, choose **master** / default branch. If only a commit hash appears, use **Developer tools → Actions → `update.install`** on the BKW Smart Meter update entity with `version: master` instead (commit-only installs can 404).
+- **Updates:** Open the **BKW Smart Meter** update entity → **Install**, set version to **`master`** to pull the current tip of `master`.
+
+**Optional — pinned releases:** [Create a GitHub release](https://github.com/pavax/home-assistant-bkw-smartmeter/releases/new) (e.g. `v0.4.1` matching `manifest.json`) if you prefer version tags over tracking `master`.
 
 ## Configuration
 
