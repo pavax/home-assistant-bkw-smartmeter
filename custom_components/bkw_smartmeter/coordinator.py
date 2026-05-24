@@ -22,7 +22,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 
 
-from .api import BkwApi, BkwApiError, get_polling_day
+from .api import BkwApi, BkwApiError, apply_published_day_to_total, get_polling_day
 
 from .auth import BkwAuthError
 
@@ -30,6 +30,7 @@ from .debug import mask_metering_point
 
 from .const import (
     CONF_CONSUMPTION_TOTAL_KWH,
+    CONF_LAST_APPLIED_DAY_KWH,
     CONF_LAST_INTERVAL_TIMESTAMP,
     CONF_LAST_POLLED_DAY,
     DOMAIN,
@@ -140,43 +141,49 @@ class BkwSmartMeterCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
 
         last_polled = _get_last_polled_day(self.config_entry.data)
+        last_applied_kwh = self.config_entry.data.get(CONF_LAST_APPLIED_DAY_KWH)
+        if last_applied_kwh is not None:
+            last_applied_kwh = float(last_applied_kwh)
 
         day_key = polling_day.isoformat()
 
-
-
-        if latest_day_kwh is not None and day_key != last_polled:
-
-            _LOGGER.debug(
-
-                "New published day applied: %s v=%s kWh (total %s -> %s)",
-
-                day_key,
-
-                latest_day_kwh,
-
-                total_kwh,
-
-                total_kwh + float(latest_day_kwh),
-
+        new_total, new_last_polled, new_last_applied, updated = (
+            apply_published_day_to_total(
+                total_kwh=total_kwh,
+                last_polled_day=last_polled,
+                last_applied_day_kwh=last_applied_kwh,
+                day_key=day_key,
+                latest_day_kwh=latest_day_kwh,
             )
+        )
 
-            total_kwh += float(latest_day_kwh)
-
-            await self._persist_totals(total_kwh, day_key)
-
+        if updated:
+            if last_polled == day_key and last_applied_kwh is not None:
+                _LOGGER.debug(
+                    "Published day revised: %s %s -> %s kWh (total %s -> %s)",
+                    day_key,
+                    last_applied_kwh,
+                    latest_day_kwh,
+                    total_kwh,
+                    new_total,
+                )
+            else:
+                _LOGGER.debug(
+                    "New published day applied: %s v=%s kWh (total %s -> %s)",
+                    day_key,
+                    latest_day_kwh,
+                    total_kwh,
+                    new_total,
+                )
+            await self._persist_totals(new_total, day_key, new_last_applied)
+            total_kwh = new_total
         else:
-
             _LOGGER.debug(
-
-                "No new published day: day=%s kwh=%s last_polled=%s",
-
+                "No cumulative update: day=%s kwh=%s last_polled=%s last_applied=%s",
                 day_key,
-
                 latest_day_kwh,
-
                 last_polled,
-
+                last_applied_kwh,
             )
 
 
@@ -207,26 +214,19 @@ class BkwSmartMeterCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
 
 
-    async def _persist_totals(self, total_kwh: float, day_key: str) -> None:
-
-        """Persist cumulative consumption and last counted day on the config entry."""
-
+    async def _persist_totals(
+        self, total_kwh: float, day_key: str, applied_day_kwh: float
+    ) -> None:
+        """Persist cumulative consumption and last applied portal day on the entry."""
         self.hass.config_entries.async_update_entry(
-
             self.config_entry,
-
             data={
-
                 **self.config_entry.data,
-
                 CONF_CONSUMPTION_TOTAL_KWH: total_kwh,
-
                 CONF_LAST_POLLED_DAY: day_key,
-
+                CONF_LAST_APPLIED_DAY_KWH: applied_day_kwh,
                 CONF_LAST_INTERVAL_TIMESTAMP: day_key,
-
             },
-
         )
 
 

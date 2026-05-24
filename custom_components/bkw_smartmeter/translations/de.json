@@ -10,7 +10,7 @@
       },
       "metering_point": {
         "title": "Messpunkt",
-        "description": "Geben Sie Ihren Messpunktcode (meteringPointCode) aus dem BKW-Portal ein. Sie finden ihn in den Browser-Entwicklertools bei metering-data-Anfragen oder in der Portal-URL.",
+        "description": "Geben Sie Ihren Messpunktcode (Messpunkt) aus dem BKW-Portal ein. Die Integration prüft ihn vor dem Abschluss mit einer Testanfrage. Den Code finden Sie unter Mein Energiemonitoring auf my.bkw.ch, in den Browser-Entwicklertools bei metering-data-Anfragen (meteringPointCode) oder in der Portal-URL.",
         "data": {
           "metering_point_code": "Messpunktcode",
           "data_type": "Datentyp (erweitert)"
@@ -20,7 +20,8 @@
     "error": {
       "invalid_auth": "Ungültiger Code oder abgelaufene Sitzung. Neuen Link erzeugen und erneut versuchen.",
       "cannot_connect": "Verbindung zu BKW fehlgeschlagen. Später erneut versuchen.",
-      "invalid_metering_point": "Ungültige Länge des Messpunktcodes.",
+      "invalid_metering_point": "Für diesen Messpunkt konnten keine Daten geladen werden. Prüfen Sie den Code auf my.bkw.ch (Mein Energiemonitoring) und versuchen Sie es erneut.",
+      "invalid_metering_point_length": "Der Messpunktcode muss zwischen 20 und 40 Zeichen lang sein.",
       "invalid_data_type": "Messdaten konnten nicht geladen werden. Öffnen Sie die Energieübersicht auf my.bkw.ch, kopieren Sie dataType aus einer metering-data-Anfrage in den DevTools und tragen Sie ihn oben ein (Standard: PRODUCTION_BKW)."
     },
     "abort": {

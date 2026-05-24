@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -14,8 +13,6 @@ from homeassistant.helpers.typing import ConfigType
 from .api import BkwApi
 from .const import DOMAIN
 from .coordinator import BkwSmartMeterCoordinator
-
-_LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 

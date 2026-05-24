@@ -72,7 +72,15 @@ If setup returns a 400 error, copy the `dataType` from a working `metering-data`
 
 ### Update interval
 
-**Configure → Options → Update interval (minutes)** (1–10). Use at most **10** minutes so tokens are refreshed before BKW’s ~15 minute session timeout. Changes apply immediately without a restart.
+**Configure → Options → Update interval (minutes)** (1–10). Default is **5** minutes. Polling keeps access tokens fresh; it does not extend BKW’s online login session.
+
+### Session lifetime
+
+BKW’s Keycloak server limits **online** browser sessions to about **6 hours**, even when tokens are refreshed every few minutes. After that, refresh fails with `invalid_grant` / `Token is not active` and Home Assistant asks you to sign in again.
+
+This integration requests the **`offline_access`** OAuth scope so Keycloak can issue **offline refresh tokens** that are not tied to that 6-hour SSO session. You must **reconfigure once** after upgrading so a new login stores offline tokens. With offline tokens and regular polling, sessions should stay valid for weeks (subject to BKW’s offline idle timeout, typically 30 days without use).
+
+If you still see auth failures after reconfiguring, check whether you logged in elsewhere (myBKW app or browser), which can revoke older tokens.
 
 ## Energy dashboard
 
@@ -84,6 +92,8 @@ If sensors stop updating or Home Assistant asks to reauthenticate:
 
 1. Open the integration → **Reconfigure** (or remove and add it again).
 2. Repeat the login steps above.
+
+After upgrading to a version that requests `offline_access`, **reconfigure once** so long-lived offline tokens are stored. Until then, expect to sign in again roughly every 6 hours.
 
 ## Security and disclaimer
 

@@ -29,10 +29,12 @@ from .debug import (
 from .const import (
     API_BASE_URL,
     CONF_ACCESS_TOKEN,
+    CONF_AUTHENTICATED_AT,
     CONF_DATA_TYPE,
     CONF_EXPIRES_AT,
     CONF_METERING_POINT_CODE,
     CONF_REFRESH_TOKEN,
+    CONF_TOKEN_SCOPE,
     DEFAULT_DATA_TYPE,
     METERING_DATA_PATH,
     PORTAL_TIMEZONE,
@@ -135,6 +137,39 @@ def daily_total_kwh(intervals: list[dict[str, Any]]) -> float | None:
     return total if has_value else None
 
 
+def apply_published_day_to_total(
+    *,
+    total_kwh: float,
+    last_polled_day: str | None,
+    last_applied_day_kwh: float | None,
+    day_key: str,
+    latest_day_kwh: float | None,
+) -> tuple[float, str | None, float | None, bool]:
+    """Merge a published portal day into the cumulative total.
+
+  BKW may revise the same day's kWh after nightly batch processing. When
+  ``day_key`` matches ``last_polled_day``, only the delta since the last applied
+  value is added. On upgrade, missing ``last_applied_day_kwh`` is synced without
+  changing the total so existing installs are not double-counted.
+  """
+    if latest_day_kwh is None:
+        return total_kwh, last_polled_day, last_applied_day_kwh, False
+
+    latest = float(latest_day_kwh)
+
+    if last_polled_day != day_key:
+        return total_kwh + latest, day_key, latest, True
+
+    if last_applied_day_kwh is None:
+        return total_kwh, day_key, latest, True
+
+    if latest == float(last_applied_day_kwh):
+        return total_kwh, last_polled_day, last_applied_day_kwh, False
+
+    delta = latest - float(last_applied_day_kwh)
+    return total_kwh + delta, day_key, latest, True
+
+
 def parse_api_error_message(body: str) -> str:
     """Extract a readable message from a BKW API error body."""
     try:
@@ -173,10 +208,10 @@ class BkwApi:
         """Sync runtime config from an updated config entry."""
         self._entry_data.update(entry_data)
 
-    async def async_ensure_token(self) -> str:
+    async def async_ensure_token(self, *, force_refresh: bool = False) -> str:
         """Return a valid access token, refreshing if needed."""
         tokens = tokens_from_entry(self._entry_data)
-        if not token_needs_refresh(tokens.get(CONF_EXPIRES_AT)):
+        if not force_refresh and not token_needs_refresh(tokens.get(CONF_EXPIRES_AT)):
             _LOGGER.debug(
                 "Using cached access token (expires %s)",
                 format_token_expiry(tokens.get(CONF_EXPIRES_AT)),
@@ -192,6 +227,10 @@ class BkwApi:
         )
         if new_tokens.get(CONF_REFRESH_TOKEN) is None:
             new_tokens[CONF_REFRESH_TOKEN] = tokens[CONF_REFRESH_TOKEN]
+        if new_tokens.get(CONF_AUTHENTICATED_AT) is None:
+            new_tokens[CONF_AUTHENTICATED_AT] = tokens.get(CONF_AUTHENTICATED_AT)
+        if new_tokens.get(CONF_TOKEN_SCOPE) is None:
+            new_tokens[CONF_TOKEN_SCOPE] = tokens.get(CONF_TOKEN_SCOPE)
 
         await self._update_tokens(new_tokens)
         self._entry_data.update(new_tokens)
@@ -218,6 +257,33 @@ class BkwApi:
             validity_stop=validity_stop,
         )
         return daily_total_kwh(intervals)
+
+    async def async_validate_metering_point(self) -> None:
+        """Probe P1D metering-data for this point and dataType.
+
+        Raises BkwAuthError or BkwApiError when the metering point or dataType
+        cannot be used. Succeeds when at least one interval is returned for a
+        recent day.
+        """
+        latest = get_polling_day()
+        days_to_try = (
+            latest,
+            latest - timedelta(days=1),
+            latest - timedelta(days=2),
+        )
+        for day in days_to_try:
+            start_utc, stop_utc, _, _ = p1d_window_for_swiss_day(day)
+            intervals = await self._async_request_metering_data(
+                resolution=RESOLUTION_P1D,
+                validity_start=_format_validity_start(start_utc),
+                validity_stop=_format_validity_stop_dt(stop_utc),
+            )
+            if intervals:
+                return
+
+        raise BkwApiError(
+            "No metering data returned for this metering point or data type"
+        )
 
     async def _async_request_metering_data(
         self,
@@ -248,65 +314,79 @@ class BkwApi:
             API_BASE_URL, METERING_DATA_PATH, params
         )
 
-        log_metering_request(
-            method="GET",
-            url=request_url,
-            params=params,
-            data_type=self.data_type,
-            metering_point=self.metering_point_code,
-            token_expires_at=tokens_from_entry(self._entry_data).get(CONF_EXPIRES_AT),
-            resolution=resolution,
-        )
+        for attempt in range(2):
+            if attempt > 0:
+                access_token = await self.async_ensure_token(force_refresh=True)
 
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Accept": "application/json",
-        }
-
-        try:
-            async with self._session.get(
-                str(url), params=params, headers=headers
-            ) as resp:
-                body = await resp.text()
-                if resp.status == 401:
-                    _LOGGER.error(
-                        "Metering data unauthorized | resolution=%s meteringPoint=%s dataType=%s",
-                        resolution,
-                        mask_metering_point(self.metering_point_code),
-                        self.data_type,
-                    )
-                    raise BkwAuthError("Unauthorized")
-                if resp.status >= 400:
-                    message = parse_api_error_message(body)
-                    log_metering_response(
-                        status=resp.status,
-                        interval_count=0,
-                        first_interval=None,
-                        last_interval=None,
-                        body_preview=body,
-                    )
-                    _LOGGER.error(
-                        "Metering data request failed (%s): %s",
-                        resp.status,
-                        message,
-                    )
-                    _LOGGER.error("Failed request URL: %s", request_url)
-                    _LOGGER.error(
-                        "Failed request params (authoritative): %s", params
-                    )
-                    raise BkwApiError(message, status=resp.status)
-                data = json.loads(body)
-        except BkwAuthError:
-            raise
-        except BkwApiError:
-            raise
-        except (ClientResponseError, ClientError, json.JSONDecodeError) as err:
-            _LOGGER.error(
-                "Metering data request failed: %s | url=%s",
-                err,
-                request_url,
+            log_metering_request(
+                method="GET",
+                url=request_url,
+                params=params,
+                data_type=self.data_type,
+                metering_point=self.metering_point_code,
+                token_expires_at=tokens_from_entry(self._entry_data).get(
+                    CONF_EXPIRES_AT
+                ),
+                resolution=resolution,
             )
-            raise BkwApiError(str(err)) from err
+
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Accept": "application/json",
+            }
+
+            try:
+                async with self._session.get(
+                    str(url), params=params, headers=headers
+                ) as resp:
+                    body = await resp.text()
+                    if resp.status == 401 and attempt == 0:
+                        _LOGGER.debug(
+                            "Metering data unauthorized; retrying after refresh"
+                        )
+                        continue
+                    if resp.status == 401:
+                        _LOGGER.error(
+                            "Metering data unauthorized | resolution=%s meteringPoint=%s dataType=%s",
+                            resolution,
+                            mask_metering_point(self.metering_point_code),
+                            self.data_type,
+                        )
+                        raise BkwAuthError("Unauthorized")
+                    if resp.status >= 400:
+                        message = parse_api_error_message(body)
+                        log_metering_response(
+                            status=resp.status,
+                            interval_count=0,
+                            first_interval=None,
+                            last_interval=None,
+                            body_preview=body,
+                        )
+                        _LOGGER.error(
+                            "Metering data request failed (%s): %s",
+                            resp.status,
+                            message,
+                        )
+                        _LOGGER.error("Failed request URL: %s", request_url)
+                        _LOGGER.error(
+                            "Failed request params (authoritative): %s", params
+                        )
+                        raise BkwApiError(message, status=resp.status)
+                    data = json.loads(body)
+            except BkwAuthError:
+                raise
+            except BkwApiError:
+                raise
+            except (ClientResponseError, ClientError, json.JSONDecodeError) as err:
+                _LOGGER.error(
+                    "Metering data request failed: %s | url=%s",
+                    err,
+                    request_url,
+                )
+                raise BkwApiError(str(err)) from err
+            break
+        else:
+            raise BkwAuthError("Unauthorized")
 
         if not isinstance(data, list):
             _LOGGER.warning(

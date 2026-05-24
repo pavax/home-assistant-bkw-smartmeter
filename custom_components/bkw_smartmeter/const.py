@@ -11,7 +11,8 @@ DOMAIN = "bkw_smartmeter"
 # OAuth2 / OpenID (Keycloak oneportal)
 CLIENT_ID = "mybkw-webapp"
 REDIRECT_URI = "https://my.bkw.ch/energy"
-OAUTH_SCOPE = "openid profile email"
+# offline_access: Keycloak offline refresh tokens are not capped by SSO Session Max (~6h).
+OAUTH_SCOPE = "openid profile email offline_access"
 
 AUTHORIZE_URL = (
     "https://login.portal-services.ch/auth/realms/oneportal/"
@@ -44,7 +45,7 @@ DATA_TYPE_STROMBEZUG = DATA_TYPE_PRODUCTION
 # Sensor display (daily kWh values, e.g. 12.345)
 SUGGESTED_DISPLAY_PRECISION = 3
 
-# Polling and token refresh (BKW refresh_expires_in is 900s; poll must stay below that)
+# Polling and token refresh (access tokens are short-lived; refresh keeps the session alive)
 UPDATE_INTERVAL_MINUTES = 5
 MIN_UPDATE_INTERVAL_MINUTES = 1
 MAX_UPDATE_INTERVAL_MINUTES = 10
@@ -56,10 +57,14 @@ TOKEN_REFRESH_MARGIN_SECONDS = 120
 CONF_ACCESS_TOKEN = "access_token"
 CONF_REFRESH_TOKEN = "refresh_token"
 CONF_EXPIRES_AT = "expires_at"
+CONF_REFRESH_EXPIRES_AT = "refresh_expires_at"
+CONF_AUTHENTICATED_AT = "authenticated_at"
+CONF_TOKEN_SCOPE = "token_scope"
 CONF_METERING_POINT_CODE = "metering_point_code"
 CONF_DATA_TYPE = "data_type"
 CONF_CONSUMPTION_TOTAL_KWH = "consumption_total_kwh"
 CONF_LAST_POLLED_DAY = "last_polled_day"
+CONF_LAST_APPLIED_DAY_KWH = "last_applied_day_kwh"
 CONF_LAST_INTERVAL_TIMESTAMP = "last_interval_timestamp"
 
 # Flow context keys (not persisted on entry)

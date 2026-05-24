@@ -11,7 +11,7 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
-from .api import BkwApi, BkwApiError, get_polling_day
+from .api import BkwApi, BkwApiError
 from .debug import mask_metering_point
 from .auth import (
     BkwAuthError,
@@ -21,11 +21,8 @@ from .auth import (
 )
 from .const import (
     AUTHORIZE_URL,
-    CONF_ACCESS_TOKEN,
     CONF_DATA_TYPE,
-    CONF_EXPIRES_AT,
     CONF_METERING_POINT_CODE,
-    CONF_REFRESH_TOKEN,
     CONF_UPDATE_INTERVAL_MINUTES,
     DEFAULT_DATA_TYPE,
     DOMAIN,
@@ -35,7 +32,6 @@ from .const import (
     MIN_UPDATE_INTERVAL_MINUTES,
     METERING_POINT_MAX_LENGTH,
     METERING_POINT_MIN_LENGTH,
-    UPDATE_INTERVAL_MINUTES,
     get_update_interval_minutes,
 )
 
@@ -53,7 +49,6 @@ STEP_METERING_POINT_SCHEMA = vol.Schema(
         vol.Optional(CONF_DATA_TYPE, default=DEFAULT_DATA_TYPE): str,
     }
 )
-
 
 class BkwSmartMeterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for BKW Smart Meter."""
@@ -136,7 +131,7 @@ class BkwSmartMeterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_metering_point(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Collect metering point code."""
+        """Collect metering point code and validate against the BKW API."""
         if user_input is None:
             return self.async_show_form(
                 step_id="metering_point",
@@ -152,7 +147,7 @@ class BkwSmartMeterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_show_form(
                 step_id="metering_point",
                 data_schema=STEP_METERING_POINT_SCHEMA,
-                errors={"base": "invalid_metering_point"},
+                errors={"base": "invalid_metering_point_length"},
             )
 
         await self.async_set_unique_id(metering_point)
@@ -176,15 +171,13 @@ class BkwSmartMeterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             },
             _noop_update,
         )
-        val_day = get_polling_day()
         _LOGGER.debug(
-            "Validating metering point %s dataType=%s swiss_day=%s",
+            "Validating metering point %s dataType=%s",
             mask_metering_point(metering_point),
             data_type,
-            val_day,
         )
         try:
-            await api.async_get_daily_total(val_day)
+            await api.async_validate_metering_point()
             _LOGGER.debug(
                 "Validation OK for %s / %s",
                 mask_metering_point(metering_point),
@@ -200,7 +193,14 @@ class BkwSmartMeterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 err,
                 err.status,
             )
-            errors["base"] = "invalid_data_type"
+            if err.status in (403, 404) or (
+                err.status is None and "No metering data" in str(err)
+            ):
+                errors["base"] = "invalid_metering_point"
+            elif err.status == 400:
+                errors["base"] = "invalid_data_type"
+            else:
+                errors["base"] = "cannot_connect"
         except Exception:  # noqa: BLE001
             _LOGGER.exception("Unexpected error validating metering point")
             errors["base"] = "cannot_connect"

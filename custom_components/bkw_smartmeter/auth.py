@@ -18,8 +18,11 @@ from .debug import log_auth_event
 from .const import (
     CLIENT_ID,
     CONF_ACCESS_TOKEN,
+    CONF_AUTHENTICATED_AT,
     CONF_EXPIRES_AT,
+    CONF_REFRESH_EXPIRES_AT,
     CONF_REFRESH_TOKEN,
+    CONF_TOKEN_SCOPE,
     OAUTH_SCOPE,
     REDIRECT_URI,
     TOKEN_REFRESH_MARGIN_SECONDS,
@@ -95,13 +98,15 @@ async def async_exchange_code(
                     detail=str(body.get("error", body)),
                 )
                 _LOGGER.error("Token exchange failed: %s", body)
-                raise BkwAuthError(
-                    body.get("error_description", body.get("error", resp.reason))
-                )
+                raise BkwAuthError(_auth_error_message(body))
             log_auth_event(
                 "exchange_code_ok",
                 status=resp.status,
-                detail=f"expires_in={body.get('expires_in')}",
+                detail=(
+                    f"expires_in={body.get('expires_in')} "
+                    f"refresh_expires_in={body.get('refresh_expires_in')} "
+                    f"scope={body.get('scope', '')}"
+                ),
             )
     except ClientResponseError as err:
         log_auth_event("exchange_code_error", detail=str(err))
@@ -110,7 +115,7 @@ async def async_exchange_code(
         log_auth_event("exchange_code_error", detail=str(err))
         raise BkwAuthError(str(err)) from err
 
-    return _normalize_token_response(body)
+    return _normalize_token_response(body, set_authenticated_at=True)
 
 
 async def async_refresh_tokens(hass: Any, refresh_token: str) -> dict[str, Any]:
@@ -136,13 +141,15 @@ async def async_refresh_tokens(hass: Any, refresh_token: str) -> dict[str, Any]:
                     detail=str(body.get("error", body)),
                 )
                 _LOGGER.error("Token refresh failed: %s", body)
-                raise BkwAuthError(
-                    body.get("error_description", body.get("error", resp.reason))
-                )
+                raise BkwAuthError(_auth_error_message(body))
             log_auth_event(
                 "refresh_ok",
                 status=resp.status,
-                detail=f"expires_in={body.get('expires_in')}",
+                detail=(
+                    f"expires_in={body.get('expires_in')} "
+                    f"refresh_expires_in={body.get('refresh_expires_in')} "
+                    f"scope={body.get('scope', '')}"
+                ),
             )
     except ClientResponseError as err:
         log_auth_event("refresh_error", detail=str(err))
@@ -151,17 +158,51 @@ async def async_refresh_tokens(hass: Any, refresh_token: str) -> dict[str, Any]:
         log_auth_event("refresh_error", detail=str(err))
         raise BkwAuthError(str(err)) from err
 
-    return _normalize_token_response(body)
+    return _normalize_token_response(body, set_authenticated_at=False)
+    """Return a user-facing auth error message."""
+    error = str(body.get("error", ""))
+    description = str(body.get("error_description", body.get("error", "")))
+    if error == "invalid_grant" or "not active" in description.lower():
+        return (
+            "BKW login session expired. Reconfigure the integration to sign in again."
+        )
+    return description
 
 
-def _normalize_token_response(body: dict[str, Any]) -> dict[str, Any]:
+def _refresh_expires_at(refresh_expires_in: Any) -> float | None:
+    """Map Keycloak refresh_expires_in to an absolute timestamp.
+
+    Offline tokens may return 0 (no fixed expiry); keep refreshing on schedule.
+    """
+    if refresh_expires_in is None:
+        return None
+    try:
+        seconds = int(refresh_expires_in)
+    except (TypeError, ValueError):
+        return None
+    if seconds <= 0:
+        return None
+    return time.time() + seconds
+
+
+def _normalize_token_response(
+    body: dict[str, Any], *, set_authenticated_at: bool
+) -> dict[str, Any]:
     """Map token response to config entry fields."""
+    now = time.time()
     expires_in = int(body.get("expires_in", 600))
-    return {
+    scope = body.get("scope")
+    result: dict[str, Any] = {
         CONF_ACCESS_TOKEN: body["access_token"],
         CONF_REFRESH_TOKEN: body.get("refresh_token"),
-        CONF_EXPIRES_AT: time.time() + expires_in,
+        CONF_EXPIRES_AT: now + expires_in,
+        CONF_REFRESH_EXPIRES_AT: _refresh_expires_at(body.get("refresh_expires_in")),
     }
+    if set_authenticated_at:
+        result[CONF_AUTHENTICATED_AT] = now
+    if scope:
+        result[CONF_TOKEN_SCOPE] = scope
+    return result
 
 
 def token_needs_refresh(expires_at: float | None) -> bool:
@@ -177,5 +218,14 @@ def tokens_from_entry(entry_data: dict[str, Any]) -> dict[str, Any]:
         CONF_ACCESS_TOKEN: entry_data[CONF_ACCESS_TOKEN],
         CONF_REFRESH_TOKEN: entry_data[CONF_REFRESH_TOKEN],
         CONF_EXPIRES_AT: entry_data.get(CONF_EXPIRES_AT),
+        CONF_REFRESH_EXPIRES_AT: entry_data.get(CONF_REFRESH_EXPIRES_AT),
+        CONF_AUTHENTICATED_AT: entry_data.get(CONF_AUTHENTICATED_AT),
+        CONF_TOKEN_SCOPE: entry_data.get(CONF_TOKEN_SCOPE),
     }
+
+
+def has_offline_access(entry_data: dict[str, Any]) -> bool:
+    """Return True when the stored token was issued with offline_access."""
+    scope = entry_data.get(CONF_TOKEN_SCOPE) or ""
+    return "offline_access" in scope.split()
 

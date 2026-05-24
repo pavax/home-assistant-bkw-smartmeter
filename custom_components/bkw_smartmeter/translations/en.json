@@ -20,7 +20,8 @@
     "error": {
       "invalid_auth": "Invalid authorization code or expired session. Generate a new link and try again.",
       "cannot_connect": "Could not connect to BKW. Try again later.",
-      "invalid_metering_point": "Invalid metering point code length.",
+      "invalid_metering_point": "Could not load data for this metering point. Check the code on my.bkw.ch (Mein Energiemonitoring) and try again.",
+      "invalid_metering_point_length": "Metering point code must be between 20 and 40 characters.",
       "invalid_data_type": "Could not load metering data. Open the energy chart on my.bkw.ch, copy the dataType from a metering-data request in DevTools, and enter it above (default: PRODUCTION_BKW)."
     },
     "abort": {
